@@ -4,6 +4,7 @@ import withAuth from "../lib/AuthenticationHoc";
 import { useInput } from '../lib/inputhook';
 import { login } from '../lib/api';
 import React from "react";
+import {storeJwt} from "../lib/jwt";
 
 function Login() {
   const { value:email, bind:bindEmail, reset:resetEmail } = useInput('');
@@ -18,8 +19,9 @@ function Login() {
     if (res.error) {
       setError(true)
       setErrorMessage(res.errorMessage)
+    } else {
+      // redirect somewhere
     }
-    console.log('res ', res)
   }
 
 
@@ -43,7 +45,7 @@ function Login() {
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error &&
-              <div className="text-sm font-small text-red-700">{errorMessage}</div>
+              <div className="text-sm font-medium text-red-700">{errorMessage}</div>
             }
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -86,4 +88,4 @@ function Login() {
   )
 }
 
-export default withAuth(Login)
+export default Login
