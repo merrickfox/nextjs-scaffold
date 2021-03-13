@@ -1,3 +1,5 @@
+import Cookies from "js-cookie";
+import {IncomingMessage, ServerResponse} from "http";
 
 interface standardResponse {
   error: boolean
@@ -6,8 +8,17 @@ interface standardResponse {
   data: any
 }
 
+interface refreshResponse {
+  accessToken: string
+  refreshToken: string
+}
+
+type req = IncomingMessage & {
+  cookies?: { [key: string]: any }
+} | undefined
 type cookies = {[key: string]: any} | undefined
-type headers = {[key: string]: string}
+type headers = {[key: string]: string} | undefined
+type res = ServerResponse | undefined
 
 export const login = async (password: string, email: string) => {
   const body: string = JSON.stringify({
@@ -15,7 +26,7 @@ export const login = async (password: string, email: string) => {
     email
   });
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}login`, {
+  const loginResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}login`, {
     method: 'post',
     credentials: 'include',
     body,
@@ -24,30 +35,29 @@ export const login = async (password: string, email: string) => {
     }
   })
 
-  return await responseTransformer(res)
+  return await responseTransformer(loginResponse)
 }
 
-export const user = async (cookies: cookies) => {
-  const headers = createHeaders(cookies)
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}user`, {
+export const user = async (req?: req, res?: res) => {
+  const headers = await createHeaders(req, res)
+  const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}user`, {
     method: 'get',
     headers,
   })
 
-  return await responseTransformer(res)
+  return await responseTransformer(userResponse)
 }
 
-const responseTransformer = async (res: any): Promise<standardResponse> => {
+const responseTransformer = async (response: any): Promise<standardResponse> => {
   let standardResponse = {
     error: false,
     errorMessage: undefined,
     errorCode: undefined,
     data: {}
   }
-
-  const json = await res.json()
-
-  if (!res.ok) {
+  const json = await response.json()
+  console.log('status: ', response.status)
+  if (!response.ok) {
     standardResponse.error = true
     standardResponse.errorMessage = json.message
     standardResponse.errorCode = json.code
@@ -58,11 +68,53 @@ const responseTransformer = async (res: any): Promise<standardResponse> => {
   return standardResponse
 }
 
-const createHeaders = (cookies: cookies): headers => {
-  let headers
-  if (cookies?.accessToken) {
+const refresh = async (req: req, res: res): Promise<string | undefined> => {
+  const refreshToken = Cookies.get('refreshToken') || req?.cookies?.refreshToken
+  if (!refreshToken) return undefined;
+
+  const body: string = JSON.stringify({
+    refreshToken,
+  });
+
+  let accessExpiry = new Date()
+  accessExpiry.setMinutes(accessExpiry.getMinutes()+15);
+  let refreshExpiry = new Date()
+  refreshExpiry.setHours(refreshExpiry.getHours()+24);
+  const refreshResponse: Response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}refresh`, {
+    method: 'post',
+    credentials: 'include',
+    body,
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  })
+
+  if (refreshResponse.ok) {
+    const refreshResponseJson = await refreshResponse.json()
+    res?.setHeader('Set-Cookie', [
+      `accessToken=${refreshResponseJson.accessToken}; Expires=${accessExpiry.toUTCString()}; SameSite=Strict`,
+      `refreshToken=${refreshResponseJson.refreshToken}; Expires=${refreshExpiry.toUTCString()}; SameSite=Strict`
+    ]);
+
+    return refreshResponseJson.accessToken
+  }
+}
+
+const createHeaders = async (req: req, res: res): Promise<headers> => {
+  let accessToken
+  if (!req?.cookies?.accessToken) {
+    accessToken = Cookies.get('accessToken')
+    if (!accessToken) {
+      accessToken = await refresh(req, res)
+    }
+  } else {
+    accessToken = req.cookies.accessToken
+  }
+
+  let headers: headers
+  if (accessToken) {
     headers = {
-      'Authorization': `Bearer ${cookies?.accessToken}`,
+      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     }
   } else {

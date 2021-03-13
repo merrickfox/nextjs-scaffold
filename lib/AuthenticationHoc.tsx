@@ -1,10 +1,10 @@
 import React, {Component} from 'react'
-import {Config} from "./config";
+import {ConfigI} from "./config";
 import { NextPage, NextPageContext } from 'next';
 
 interface props {
   children: React.ReactNode
-  config: Config
+  config: ConfigI
 }
 
 export default function withAuth(AuthComponent: NextPage) {

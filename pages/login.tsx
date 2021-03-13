@@ -1,12 +1,10 @@
-import Head from 'next/head'
-import Shell from "../components/Shell";
-import withAuth from "../lib/AuthenticationHoc";
 import { useInput } from '../lib/inputhook';
 import { login } from '../lib/api';
 import React from "react";
-import {storeJwt} from "../lib/jwt";
+import { useRouter } from 'next/router'
 
 function Login() {
+  const router = useRouter()
   const { value:email, bind:bindEmail, reset:resetEmail } = useInput('');
   const { value:password, bind:bindPassword, reset:resetPassword } = useInput('');
   const [error, setError] = React.useState<boolean>(false);
@@ -21,6 +19,13 @@ function Login() {
       setErrorMessage(res.errorMessage)
     } else {
       // redirect somewhere
+      const root = location.protocol + '//' + location.host
+      const to = router.query['to']
+      let url = new URL(root);
+      if (typeof to === "string") {
+        url = new URL(decodeURIComponent(root+to))
+      }
+      router.push(url)
     }
   }
 
