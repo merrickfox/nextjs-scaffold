@@ -49,7 +49,7 @@ export const user = async (req?: req, res?: res) => {
 }
 
 const responseTransformer = async (response: any): Promise<standardResponse> => {
-  let standardResponse = {
+  const standardResponse = {
     error: false,
     errorMessage: undefined,
     errorCode: undefined,
@@ -76,9 +76,9 @@ const refresh = async (req: req, res: res): Promise<string | undefined> => {
     refreshToken,
   });
 
-  let accessExpiry = new Date()
+  const accessExpiry = new Date()
   accessExpiry.setMinutes(accessExpiry.getMinutes()+15);
-  let refreshExpiry = new Date()
+  const refreshExpiry = new Date()
   refreshExpiry.setHours(refreshExpiry.getHours()+24);
   const refreshResponse: Response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}refresh`, {
     method: 'post',
